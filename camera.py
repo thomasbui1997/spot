@@ -1,5 +1,6 @@
 import cv2
 import mediapipe as mp
+import time
 
 # Set up media pipe
 mp_pose = mp.solutions.pose
@@ -10,6 +11,10 @@ mp_drawing = mp.solutions.drawing_utils
 rep_count = 0
 squatting = False
 squat_feedback = ""
+
+# Timer variables
+rep_start_time = None
+rep_speed = None
 
 # Open camera
 cap = cv2.VideoCapture(0)
@@ -34,17 +39,24 @@ while cap.isOpened():
         knee_y = result.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE].y
         ankle_y = result.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ANKLE].y
 
-
         # Higher Y Values are lower in the image
         squat_feedback = f"Reps: {rep_count}"
+
         if abs(hip_y - knee_y) < 0.05: 
             if not squatting:
                 squatting = True # User in down phase
+                rep_start_time = time.time()
             squat_feedback += " - Good depth!"
         else:
-            if squatting and abs(hip_y - knee_y) > 0.2:
+            if squatting and abs(hip_y - knee_y) > 0.5:
                 rep_count += 1
                 squatting = False # Reset to up phase
+
+                # Stop timer and calculate speed
+                if rep_start_time:
+                    rep_speed = time.time() - rep_start_time
+                    squat_feedback += f" - Rep Speed: {rep_speed:.2f}s"
+                    rep_start_time = None
             squat_feedback += " - Squat!!!!"
 
 
